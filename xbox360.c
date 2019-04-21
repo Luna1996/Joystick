@@ -1,33 +1,25 @@
 #include <fcntl.h>
+#include <linux/input.h>
 #include <stdio.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <unistd.h>
-#include "types.h"
 
-typedef struct {
-  u32 time;
-  u8 type;
-  u8 name;
-  i16 value;
-} js_event;
 
 int main(int argc, char **argv) {
-  const char *device;
-  // js_event e;
-  char e[8];
-  i32 js, es;
-
-  if (argc > 1)
-    device = argv[1];
-  else
-    device = "/dev/input/js0";
-
-  js = open(device, O_RDONLY);
-  int s;
-  while (1) {
-    s = read(js, &e, 8);
-    for (int i = 0; i < 8; i++) printf("%04x ", e[i]);
-    printf("size:%d\n", s);
+  int fd;
+  if (argc < 2) {
+    printf("usage: %s \n", argv[0]);
+    return 1;
   }
-  close(js);
-  return 0;
+  fd = open(argv[1], O_RDONLY);
+  struct input_event ev;
+
+  while (1) {
+    read(fd, &ev, sizeof(struct input_event));
+
+    if (ev.type == 1)
+      // printf("key %i state %i\n", ev.code, ev.value);
+      if (ev.value == 0) printf(" : [key %i]\n ", ev.code);
+  }
 }
