@@ -21,6 +21,7 @@ int main(int argc, char **argv) {
     device = "/dev/input/js0";
 
   js = open(device, O_RDONLY);
+  printf("js:%d\n", js);
   es = sizeof(e);
   while (read(js, &e, es) == es) {
     printf("time:%u type:%u name:%u value:%d\n", e.time, e.type, e.name,
