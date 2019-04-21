@@ -7,6 +7,10 @@
 #include "types.h"
 
 typedef struct {
+  u64 time;
+  u16 type;
+  u16 name;
+  i32 value;
 } js_event;
 
 int main(int argc, char **argv) {
@@ -20,6 +24,7 @@ int main(int argc, char **argv) {
 
   int s;
   u16 e[16];
+  printf("%d\n", sizeof(js_event));
   while (1) {
     s = read(fd, e, 32);
     for (int i = 0; i < 16; i++) {
