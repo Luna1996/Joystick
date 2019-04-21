@@ -20,11 +20,11 @@ int main(int argc, char **argv) {
     return 1;
   }
   fd = open(argv[1], O_RDONLY);
-  u64 ev[4];
+  u8 ev[32];
 
   while (1) {
     s = read(fd, ev, 32);
-    for (int i = 0; i < 4; i++) printf("%08x ", ev[i]);
+    for (int i = 0; i < s; i++) printf("%04x ", ev[i]);
     printf("\n");
   }
 }
