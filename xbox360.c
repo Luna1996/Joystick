@@ -23,10 +23,8 @@ int main(int argc, char **argv) {
   js = open(device, O_RDONLY);
   printf("js:%d\n", js);
   es = sizeof(e);
-  while (read(js, &e, es) == es) {
-    printf("time:%u type:%u name:%u value:%d\n", e.time, e.type, e.name,
-           e.value);
-  }
+  read(js, &e, es);
+  printf("time:%u type:%u name:%u value:%d\n", e.time, e.type, e.name, e.value);
   close(js);
   return 0;
 }
