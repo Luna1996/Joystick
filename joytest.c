@@ -98,7 +98,6 @@ int main(int argc, char *argv[]) {
           printf("Axis %u at (%6d, %6d)\n", axis, axes[axis].x, axes[axis].y);
         break;
       default:
-        printf("event!\n");
         break;
     }
   }
