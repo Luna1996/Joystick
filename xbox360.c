@@ -47,7 +47,7 @@ int main(int argc, char **argv) {
 
   while (1) {
     s = read(fd, ev, 32);
-    printf("sec:%08x usec:%08x type:%04x code:%04x value:%08x\n", ev[0].sec,
+    printf("sec:%08x usec:%08x type:%04x code:%04x value:%d\n", ev[0].sec,
            ev[0].usec, ev[0].type, ev[0].code, ev[0].value);
     // for (int i = 0; i < s; i++) printf("%02x ", ev[i]);
     // printf("\n");
