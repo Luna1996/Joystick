@@ -1,7 +1,6 @@
-#include <linux/module.h>
-#include <linux/kernel.h>
 #include <linux/init.h>
-
+#include <linux/kernel.h>
+#include <linux/module.h>
 
 static int hello_2_init(void) {
   printk(KERN_INFO "Hello,world 2\n");
