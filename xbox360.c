@@ -19,11 +19,11 @@ int main(int argc, char **argv) {
   struct input_event ev;
 
   int s;
-  u8 e[100];
+  u16 e[16];
   while (1) {
-    s = read(fd, e, 100);
-    for (int i = 0; i < s; i++) {
-      printf("%02x ", e[i]);
+    s = read(fd, e, 32);
+    for (int i = 0; i < 16; i++) {
+      printf("%04x ", e[i]);
     }
     printf("size:%d\n", s);
   }
