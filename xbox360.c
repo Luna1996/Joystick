@@ -36,6 +36,9 @@ typedef struct {
 #define JS_DX 0x0010
 #define JS_DY 0x0011
 
+#define JS_TMAX   255
+#define JS_XYMAX  32768
+
 int main(int argc, char **argv) {
   int fd, s;
   if (argc < 2) {
