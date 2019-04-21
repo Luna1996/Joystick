@@ -20,11 +20,11 @@ int main(int argc, char **argv) {
     return 1;
   }
   fd = open(argv[1], O_RDONLY);
-  js_event ev[2];
+  u64 ev[4];
 
   while (1) {
     s = read(fd, ev, 32);
-    printf("time:%016x type:%04x name:%04x value:%08x\n", ev[0].time,
-           ev[0].type, ev[0].name, ev[0].value);
+    for (int i = 0; i < 4; i++) printf("%08x ", ev[i]);
+    printf("\n");
   }
 }
