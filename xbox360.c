@@ -14,22 +14,17 @@ typedef struct {
 } js_event;
 
 int main(int argc, char **argv) {
-  int fd;
+  int fd, s;
   if (argc < 2) {
     printf("usage: %s \n", argv[0]);
     return 1;
   }
   fd = open(argv[1], O_RDONLY);
-  struct input_event ev;
+  js_event ev[2];
 
-  int s;
-  u16 e[16];
-  printf("%d\n", sizeof(js_event));
   while (1) {
-    s = read(fd, e, 32);
-    for (int i = 0; i < 16; i++) {
-      printf("%04x ", e[i]);
-    }
-    printf("size:%d\n", s);
+    s = read(fd, ev, 32);
+    printf("time:%016x type:%04x name:%04x value:%08x\n", ev[0].time,
+           ev[0].type, ev[0].name, ev[0].value);
   }
 }
