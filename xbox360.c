@@ -22,9 +22,12 @@ int main(int argc, char **argv) {
     device = "/dev/input/js0";
 
   js = open(device, O_RDONLY);
-  int s = read(js, &e, 8);
-  for (int i = 0; i < 8; i++) printf("%04x ", e[i]);
-  printf("size:%d\n", s);
+  int s;
+  while (1) {
+    s = read(js, &e, 8);
+    for (int i = 0; i < 8; i++) printf("%04x ", e[i]);
+    printf("size:%d\n", s);
+  }
   close(js);
   return 0;
 }
