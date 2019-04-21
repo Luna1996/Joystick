@@ -14,8 +14,10 @@ int main(int argc, char **argv) {
   fd = open(argv[1], O_RDONLY);
   struct input_event ev;
 
+  int s;
   while (1) {
-    read(fd, &ev, sizeof(struct input_event));
+    s = read(fd, &ev, sizeof(struct input_event));
+    printf("size:%d", s);
     printf("time:%d type:%d code:%d value:%d\n", ev.time, ev.type, ev.code,
            ev.value);
   }
