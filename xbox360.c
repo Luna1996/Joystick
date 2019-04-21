@@ -16,7 +16,7 @@ int main(int argc, char **argv) {
 
   while (1) {
     read(fd, &ev, sizeof(struct input_event));
-
-    printf("key %i state %i\n", ev.code, ev.value);
+    printf("time:%d type:%d code:%d value:%d\n", ev.time, ev.type, ev.code,
+           ev.value);
   }
 }
