@@ -24,7 +24,7 @@ int main(int argc, char **argv) {
 
   while (1) {
     s = read(fd, ev, 32);
-    for (int i = 0; i < s; i++) printf("%04x ", ev[i]);
+    for (int i = 0; i < s; i++) printf("%02x ", ev[i]);
     printf("\n");
   }
 }
