@@ -20,11 +20,13 @@ int main(int argc, char **argv) {
     return 1;
   }
   fd = open(argv[1], O_RDONLY);
-  u8 ev[32];
+  input_event ev;
 
   while (1) {
-    s = read(fd, ev, 32);
-    for (int i = 0; i < s; i++) printf("%02x ", ev[i]);
-    printf("\n");
+    s = read(fd, &ev, 16);
+    printf("time:%016x type:%04x code:%04x value:%08x\n", ev.time, ev.type,
+           ev.code, ev.value);
+    // for (int i = 0; i < s; i++) printf("%02x ", ev[i]);
+    // printf("\n");
   }
 }
