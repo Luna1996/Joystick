@@ -1797,6 +1797,9 @@ static struct usb_driver xpad_driver = {
     .name = "xbox",
     .probe = xpad_probe,
     .disconnect = xpad_disconnect,
+    .suspend = xpad_suspend,
+    .resume = xpad_resume,
+    .reset_resume = xpad_resume,
     .id_table = xpad_table,
 };
 
