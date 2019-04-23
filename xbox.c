@@ -35,13 +35,12 @@ struct usb_xpad {
 };
 
 static void xpad_irq_in(struct urb *urb) {
-  printk("input!\n");
-
   struct usb_xpad *xpad = urb->context;
   struct input_dev *dev = xpad->dev;
   unsigned char *data = xpad->idata;
   /* valid pad data */
   if (data[0] != 0x00) return;
+  printk("input!\n");
 
   // start/back buttons
   input_report_key(dev, BTN_START, data[2] & 0x10);
@@ -119,7 +118,7 @@ static const signed short xpad_abs[] = {
 
 static int xpad_init_input(struct usb_xpad *xpad) {
   struct input_dev *input_dev;
-  int i;
+  int i, error;
 
   input_dev = input_allocate_device();
 
@@ -140,7 +139,7 @@ static int xpad_init_input(struct usb_xpad *xpad) {
   for (i = 0; i < 11; i++)
     input_set_capability(input_dev, EV_KEY, xpad_common_btn[i]);
 
-  input_register_device(xpad->dev);
+  error = input_register_device(xpad->dev);
   xpad->input_created = true;
   return 0;
 }
