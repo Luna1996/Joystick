@@ -34,11 +34,6 @@ struct usb_xpad {
   const char *name; /* name of the device */
 };
 
-static void xpad360_process_packet(struct usb_xpad *xpad, struct input_dev *dev,
-                                   u16 cmd, unsigned char *data) {
-  /* valid pad data */
-}
-
 static void xpad_irq_in(struct urb *urb) {
   struct usb_xpad *xpad = urb->context;
   struct input_dev *dev = xpad->dev;
@@ -93,25 +88,15 @@ static void xpad_irq_in(struct urb *urb) {
   retval = usb_submit_urb(urb, GFP_ATOMIC);
 }
 
-static int xpad_start_input(struct usb_xpad *xpad) {
+static int xpad_open(struct input_dev *dev) {
+  struct usb_xpad *xpad = input_get_drvdata(dev);
   if (usb_submit_urb(xpad->irq_in, GFP_KERNEL)) return -EIO;
   return 0;
 }
 
-static void xpad_stop_input(struct usb_xpad *xpad) {
-  usb_kill_urb(xpad->irq_in);
-}
-
-static int xpad_open(struct input_dev *dev) {
-  struct usb_xpad *xpad = input_get_drvdata(dev);
-
-  return xpad_start_input(xpad);
-}
-
 static void xpad_close(struct input_dev *dev) {
   struct usb_xpad *xpad = input_get_drvdata(dev);
-
-  xpad_stop_input(xpad);
+  usb_kill_urb(xpad->irq_in);
 }
 
 static void xpad_set_up_abs(struct input_dev *input_dev, signed short abs) {
@@ -130,13 +115,6 @@ static void xpad_set_up_abs(struct input_dev *input_dev, signed short abs) {
     case ABS_HAT0Y:
       input_set_abs_params(input_dev, abs, -1, 1, 0, 0);
       break;
-  }
-}
-
-static void xpad_deinit_input(struct usb_xpad *xpad) {
-  if (xpad->input_created) {
-    xpad->input_created = false;
-    input_unregister_device(xpad->dev);
   }
 }
 
@@ -232,7 +210,10 @@ static int xpad_probe(struct usb_interface *intf,
 
 static void xpad_disconnect(struct usb_interface *intf) {
   struct usb_xpad *xpad = usb_get_intfdata(intf);
-  xpad_deinit_input(xpad);
+  if (xpad->input_created) {
+    xpad->input_created = false;
+    input_unregister_device(xpad->dev);
+  }
   usb_free_urb(xpad->irq_in);
   usb_free_coherent(xpad->udev, XPAD_PKT_LEN, xpad->idata, xpad->idata_dma);
   kfree(xpad);
@@ -245,7 +226,7 @@ static const struct usb_device_id xpad_table[] = {XPAD_XBOX360_VENDOR(0x045e),
 MODULE_DEVICE_TABLE(usb, xpad_table);
 
 static struct usb_driver xpad_driver = {
-    .name = "xpad",
+    .name = "xbox",
     .probe = xpad_probe,
     .disconnect = xpad_disconnect,
     .id_table = xpad_table,
