@@ -175,6 +175,10 @@ static void xpad360_process_packet(struct usb_xpad *xpad, struct input_dev *dev,
   input_report_abs(dev, ABS_RX, (__s16)le16_to_cpup((__le16 *)(data + 10)));
   input_report_abs(dev, ABS_RY, ~(__s16)le16_to_cpup((__le16 *)(data + 12)));
 
+  /* triggers left/right */
+  input_report_abs(dev, ABS_Z, data[4]);
+  input_report_abs(dev, ABS_RZ, data[5]);
+
   input_sync(dev);
 }
 
