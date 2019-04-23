@@ -40,16 +40,15 @@ static void xpad_irq_in(struct urb *urb) {
   unsigned char *data = xpad->idata;
   /* valid pad data */
   if (data[0] != 0x00) return;
+  // printk("input!\n");
 
-  input_report_abs(dev, ABS_HAT0X, !!(data[2] & 0x08) - !!(data[2] & 0x04));
-  input_report_abs(dev, ABS_HAT0Y, !!(data[2] & 0x02) - !!(data[2] & 0x01));
-  /* start/back buttons */
+  // start/back buttons
   input_report_key(dev, BTN_START, data[2] & 0x10);
   input_report_key(dev, BTN_SELECT, data[2] & 0x20);
-  /* stick press left/right */
+  // stick press left/right
   input_report_key(dev, BTN_THUMBL, data[2] & 0x40);
   input_report_key(dev, BTN_THUMBR, data[2] & 0x80);
-  /* buttons A,B,X,Y,TL,TR and MODE */
+  // buttons A,B,X,Y,TL,TR and HOME
   input_report_key(dev, BTN_A, data[3] & 0x10);
   input_report_key(dev, BTN_B, data[3] & 0x20);
   input_report_key(dev, BTN_X, data[3] & 0x40);
@@ -57,13 +56,15 @@ static void xpad_irq_in(struct urb *urb) {
   input_report_key(dev, BTN_TL, data[3] & 0x01);
   input_report_key(dev, BTN_TR, data[3] & 0x02);
   input_report_key(dev, BTN_MODE, data[3] & 0x04);
+  // D-PAD
+  input_report_abs(dev, ABS_HAT0X, !!(data[2] & 0x08) - !!(data[2] & 0x04));
+  input_report_abs(dev, ABS_HAT0Y, !!(data[2] & 0x02) - !!(data[2] & 0x01));
   /* left stick */
   input_report_abs(dev, ABS_X, (__s16)le16_to_cpup((__le16 *)(data + 6)));
   input_report_abs(dev, ABS_Y, ~(__s16)le16_to_cpup((__le16 *)(data + 8)));
   /* right stick */
   input_report_abs(dev, ABS_RX, (__s16)le16_to_cpup((__le16 *)(data + 10)));
   input_report_abs(dev, ABS_RY, ~(__s16)le16_to_cpup((__le16 *)(data + 12)));
-
   /* triggers left/right */
   input_report_abs(dev, ABS_Z, data[4]);
   input_report_abs(dev, ABS_RZ, data[5]);
@@ -98,6 +99,9 @@ static void xpad_set_up_abs(struct input_dev *input_dev, signed short abs) {
     case ABS_HAT0Y:
       input_set_abs_params(input_dev, abs, -1, 1, 0, 0);
       break;
+    default:
+      input_set_abs_params(input_dev, abs, 0, 0, 0, 0);
+      break;
   }
 }
 
@@ -117,7 +121,7 @@ static const signed short xpad_abs[] = {
 
 static int xpad_init_input(struct usb_xpad *xpad) {
   struct input_dev *input_dev;
-  int i;
+  int i, error;
 
   input_dev = input_allocate_device();
 
@@ -138,7 +142,7 @@ static int xpad_init_input(struct usb_xpad *xpad) {
   for (i = 0; i < 11; i++)
     input_set_capability(input_dev, EV_KEY, xpad_common_btn[i]);
 
-  input_register_device(xpad->dev);
+  error = input_register_device(xpad->dev);
   xpad->input_created = true;
   return 0;
 }
