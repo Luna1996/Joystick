@@ -143,7 +143,7 @@ static const struct xpad_device {
     {0x045e, 0x028f, "Microsoft X-Box 360 pad v2", 0, XTYPE_XBOX360},
     {0x045e, 0x0291, "Xbox 360 Wireless Receiver (XBOX)", MAP_DPAD_TO_BUTTONS,
      XTYPE_XBOX360W},
-    {0x045e, 0x02d1, "Microsoft X-Box One pad", 0, XTYPE_XBOXONE},
+    {0x045e, 0x02d1, "XBOX 360 PAD - CSE 522S", 0, XTYPE_XBOXONE},
     {0x045e, 0x02dd, "Microsoft X-Box One pad (Firmware 2015)", 0,
      XTYPE_XBOXONE},
     {0x045e, 0x02e3, "Microsoft X-Box One Elite pad", 0, XTYPE_XBOXONE},
@@ -1816,71 +1816,12 @@ static void xpad_disconnect(struct usb_interface *intf) {
   usb_set_intfdata(intf, NULL);
 }
 
-static int xpad_suspend(struct usb_interface *intf, pm_message_t message) {
-  struct usb_xpad *xpad = usb_get_intfdata(intf);
-  struct input_dev *input = xpad->dev;
-
-  if (xpad->xtype == XTYPE_XBOX360W) {
-    /*
-     * Wireless controllers always listen to input so
-     * they are notified when controller shows up
-     * or goes away.
-     */
-    xpad360w_stop_input(xpad);
-
-    /*
-     * The wireless adapter is going off now, so the
-     * gamepads are going to become disconnected.
-     * Unless explicitly disabled, power them down
-     * so they don't just sit there flashing.
-     */
-    if (auto_poweroff && xpad->pad_present) xpad360w_poweroff_controller(xpad);
-  } else {
-    mutex_lock(&input->mutex);
-    if (input->users) xpad_stop_input(xpad);
-    mutex_unlock(&input->mutex);
-  }
-
-  xpad_stop_output(xpad);
-
-  return 0;
-}
-
-static int xpad_resume(struct usb_interface *intf) {
-  struct usb_xpad *xpad = usb_get_intfdata(intf);
-  struct input_dev *input = xpad->dev;
-  int retval = 0;
-
-  if (xpad->xtype == XTYPE_XBOX360W) {
-    retval = xpad360w_start_input(xpad);
-  } else {
-    mutex_lock(&input->mutex);
-    if (input->users) {
-      retval = xpad_start_input(xpad);
-    } else if (xpad->xtype == XTYPE_XBOXONE) {
-      /*
-       * Even if there are no users, we'll send Xbox One pads
-       * the startup sequence so they don't sit there and
-       * blink until somebody opens the input device again.
-       */
-      retval = xpad_start_xbox_one(xpad);
-    }
-    mutex_unlock(&input->mutex);
-  }
-
-  return retval;
-}
-
 static struct usb_driver xpad_driver = {
     .name = "xpad",
     .probe = xpad_probe,
     .disconnect = xpad_disconnect,
-    .suspend = xpad_suspend,
-    .resume = xpad_resume,
-    .reset_resume = xpad_resume,
     .id_table = xpad_table,
 };
 
 module_usb_driver(xpad_driver);
-
 MODULE_LICENSE("GPL");
