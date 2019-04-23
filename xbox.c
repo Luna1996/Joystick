@@ -92,13 +92,21 @@ static void xpad_irq_in(struct urb *urb) {
     case -ENOENT:
     case -ESHUTDOWN:
       /* this urb is terminated, clean up */
+      dev_dbg(dev, "%s - urb shutting down with status: %d\n", __func__,
+              status);
       return;
     default:
-      retval = usb_submit_urb(urb, GFP_ATOMIC);
-      return;
+      dev_dbg(dev, "%s - nonzero urb status received: %d\n", __func__, status);
+      goto exit;
   }
 
   xpad360_process_packet(xpad, xpad->dev, 0, xpad->idata);
+
+exit:
+  retval = usb_submit_urb(urb, GFP_ATOMIC);
+  if (retval)
+    dev_err(dev, "%s - usb_submit_urb failed with result %d\n", __func__,
+            retval);
 }
 
 static int xpad_start_input(struct usb_xpad *xpad) {
