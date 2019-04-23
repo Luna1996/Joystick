@@ -94,13 +94,11 @@ static void xpad_irq_in(struct urb *urb) {
       /* this urb is terminated, clean up */
       return;
     default:
-      goto exit;
+      retval = usb_submit_urb(urb, GFP_ATOMIC);
+      return;
   }
 
   xpad360_process_packet(xpad, xpad->dev, 0, xpad->idata);
-
-exit:
-  retval = usb_submit_urb(urb, GFP_ATOMIC);
 }
 
 static int xpad_start_input(struct usb_xpad *xpad) {
