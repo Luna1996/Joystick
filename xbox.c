@@ -42,12 +42,7 @@ struct usb_xpad {
 };
 
 static void xpad360_process_packet(struct usb_xpad *xpad, struct input_dev *dev,
-                                   u16 cmd, unsigned char *data) {}
-
-static void xpad_irq_in(struct urb *urb) {
-  struct usb_xpad *xpad = urb->context;
-  struct input_dev *dev = xpad->dev;
-  unsigned char *data = xpad->idata;
+                                   u16 cmd, unsigned char *data) {
   /* valid pad data */
   if (data[0] != 0x00) return;
 
@@ -80,6 +75,38 @@ static void xpad_irq_in(struct urb *urb) {
   input_report_abs(dev, ABS_RZ, data[5]);
 
   input_sync(dev);
+}
+
+static void xpad_irq_in(struct urb *urb) {
+  struct usb_xpad *xpad = urb->context;
+  struct device *dev = &xpad->intf->dev;
+  int retval, status;
+
+  status = urb->status;
+
+  switch (status) {
+    case 0:
+      /* success */
+      break;
+    case -ECONNRESET:
+    case -ENOENT:
+    case -ESHUTDOWN:
+      /* this urb is terminated, clean up */
+      dev_dbg(dev, "%s - urb shutting down with status: %d\n", __func__,
+              status);
+      return;
+    default:
+      dev_dbg(dev, "%s - nonzero urb status received: %d\n", __func__, status);
+      goto exit;
+  }
+
+  xpad360_process_packet(xpad, xpad->dev, 0, xpad->idata);
+
+exit:
+  retval = usb_submit_urb(urb, GFP_ATOMIC);
+  if (retval)
+    dev_err(dev, "%s - usb_submit_urb failed with result %d\n", __func__,
+            retval);
 }
 
 static int xpad_start_input(struct usb_xpad *xpad) {
@@ -132,6 +159,7 @@ static void xpad_deinit_input(struct usb_xpad *xpad) {
   }
 }
 
+/* buttons shared with xbox and xbox360 */
 static const signed short xpad_common_btn[] = {
     BTN_A,     BTN_B,      BTN_X,      BTN_Y,      /* "analog" buttons */
     BTN_START, BTN_SELECT, BTN_THUMBL, BTN_THUMBR, /* start/back/sticks */
@@ -143,12 +171,12 @@ static const signed short xpad_abs[] = {
     ABS_X,     ABS_Y,     /* left stick */
     ABS_RX,    ABS_RY,    /* right stick */
     ABS_HAT0X, ABS_HAT0Y, /* d-pad axes */
-    ABS_Z,     ABS_RZ,    /* triggers left/right */
+    ABS_Z,     ABS_RZ     /* triggers left/right */
 };
 
 static int xpad_init_input(struct usb_xpad *xpad) {
   struct input_dev *input_dev;
-  int i;
+  int i, error;
 
   input_dev = input_allocate_device();
 
@@ -169,7 +197,7 @@ static int xpad_init_input(struct usb_xpad *xpad) {
   for (i = 0; i < 11; i++)
     input_set_capability(input_dev, EV_KEY, xpad_common_btn[i]);
 
-  input_register_device(xpad->dev);
+  error = input_register_device(xpad->dev);
   xpad->input_created = true;
   return 0;
 }
