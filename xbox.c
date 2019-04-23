@@ -18,6 +18,13 @@
     XPAD_XBOX360_VENDOR_PROTOCOL((vend), 129)  \
   }
 
+#define XPAD_OUT_CMD_IDX 0
+#define XPAD_OUT_FF_IDX 1
+#define XPAD_OUT_LED_IDX (1 + IS_ENABLED(CONFIG_JOYSTICK_XPAD_FF))
+#define XPAD_NUM_OUT_PACKETS                 \
+  (1 + IS_ENABLED(CONFIG_JOYSTICK_XPAD_FF) + \
+   IS_ENABLED(CONFIG_JOYSTICK_XPAD_LEDS))
+
 struct usb_xpad {
   struct input_dev *dev;      /* input device interface */
   struct usb_device *udev;    /* usb device */
@@ -34,21 +41,25 @@ struct usb_xpad {
   const char *name; /* name of the device */
 };
 
+static void xpad360_process_packet(struct usb_xpad *xpad, struct input_dev *dev,
+                                   u16 cmd, unsigned char *data) {}
+
 static void xpad_irq_in(struct urb *urb) {
   struct usb_xpad *xpad = urb->context;
   struct input_dev *dev = xpad->dev;
   unsigned char *data = xpad->idata;
   /* valid pad data */
   if (data[0] != 0x00) return;
-  // printk("input!\n");
 
-  // start/back buttons
+  input_report_abs(dev, ABS_HAT0X, !!(data[2] & 0x08) - !!(data[2] & 0x04));
+  input_report_abs(dev, ABS_HAT0Y, !!(data[2] & 0x02) - !!(data[2] & 0x01));
+  /* start/back buttons */
   input_report_key(dev, BTN_START, data[2] & 0x10);
   input_report_key(dev, BTN_SELECT, data[2] & 0x20);
-  // stick press left/right
+  /* stick press left/right */
   input_report_key(dev, BTN_THUMBL, data[2] & 0x40);
   input_report_key(dev, BTN_THUMBR, data[2] & 0x80);
-  // buttons A,B,X,Y,TL,TR and HOME
+  /* buttons A,B,X,Y,TL,TR and MODE */
   input_report_key(dev, BTN_A, data[3] & 0x10);
   input_report_key(dev, BTN_B, data[3] & 0x20);
   input_report_key(dev, BTN_X, data[3] & 0x40);
@@ -56,15 +67,14 @@ static void xpad_irq_in(struct urb *urb) {
   input_report_key(dev, BTN_TL, data[3] & 0x01);
   input_report_key(dev, BTN_TR, data[3] & 0x02);
   input_report_key(dev, BTN_MODE, data[3] & 0x04);
-  // D-PAD
-  input_report_abs(dev, ABS_HAT0X, !!(data[2] & 0x08) - !!(data[2] & 0x04));
-  input_report_abs(dev, ABS_HAT0Y, !!(data[2] & 0x02) - !!(data[2] & 0x01));
   /* left stick */
   input_report_abs(dev, ABS_X, (__s16)le16_to_cpup((__le16 *)(data + 6)));
   input_report_abs(dev, ABS_Y, ~(__s16)le16_to_cpup((__le16 *)(data + 8)));
+
   /* right stick */
   input_report_abs(dev, ABS_RX, (__s16)le16_to_cpup((__le16 *)(data + 10)));
   input_report_abs(dev, ABS_RY, ~(__s16)le16_to_cpup((__le16 *)(data + 12)));
+
   /* triggers left/right */
   input_report_abs(dev, ABS_Z, data[4]);
   input_report_abs(dev, ABS_RZ, data[5]);
@@ -72,15 +82,25 @@ static void xpad_irq_in(struct urb *urb) {
   input_sync(dev);
 }
 
-static int xpad_open(struct input_dev *dev) {
-  struct usb_xpad *xpad = input_get_drvdata(dev);
+static int xpad_start_input(struct usb_xpad *xpad) {
   if (usb_submit_urb(xpad->irq_in, GFP_KERNEL)) return -EIO;
   return 0;
 }
 
+static void xpad_stop_input(struct usb_xpad *xpad) {
+  usb_kill_urb(xpad->irq_in);
+}
+
+static int xpad_open(struct input_dev *dev) {
+  struct usb_xpad *xpad = input_get_drvdata(dev);
+
+  return xpad_start_input(xpad);
+}
+
 static void xpad_close(struct input_dev *dev) {
   struct usb_xpad *xpad = input_get_drvdata(dev);
-  usb_kill_urb(xpad->irq_in);
+
+  xpad_stop_input(xpad);
 }
 
 static void xpad_set_up_abs(struct input_dev *input_dev, signed short abs) {
@@ -105,6 +125,13 @@ static void xpad_set_up_abs(struct input_dev *input_dev, signed short abs) {
   }
 }
 
+static void xpad_deinit_input(struct usb_xpad *xpad) {
+  if (xpad->input_created) {
+    xpad->input_created = false;
+    input_unregister_device(xpad->dev);
+  }
+}
+
 static const signed short xpad_common_btn[] = {
     BTN_A,     BTN_B,      BTN_X,      BTN_Y,      /* "analog" buttons */
     BTN_START, BTN_SELECT, BTN_THUMBL, BTN_THUMBR, /* start/back/sticks */
@@ -121,7 +148,7 @@ static const signed short xpad_abs[] = {
 
 static int xpad_init_input(struct usb_xpad *xpad) {
   struct input_dev *input_dev;
-  int i, error;
+  int i;
 
   input_dev = input_allocate_device();
 
@@ -142,7 +169,7 @@ static int xpad_init_input(struct usb_xpad *xpad) {
   for (i = 0; i < 11; i++)
     input_set_capability(input_dev, EV_KEY, xpad_common_btn[i]);
 
-  error = input_register_device(xpad->dev);
+  input_register_device(xpad->dev);
   xpad->input_created = true;
   return 0;
 }
@@ -196,10 +223,7 @@ static int xpad_probe(struct usb_interface *intf,
 
 static void xpad_disconnect(struct usb_interface *intf) {
   struct usb_xpad *xpad = usb_get_intfdata(intf);
-  if (xpad->input_created) {
-    xpad->input_created = false;
-    input_unregister_device(xpad->dev);
-  }
+  xpad_deinit_input(xpad);
   usb_free_urb(xpad->irq_in);
   usb_free_coherent(xpad->udev, XPAD_PKT_LEN, xpad->idata, xpad->idata_dma);
   kfree(xpad);
