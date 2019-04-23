@@ -262,33 +262,6 @@ exit:
             retval);
 }
 
-static bool xpad_prepare_next_out_packet(struct usb_xpad *xpad) {
-  struct xpad_output_packet *pkt, *packet = NULL;
-  int i;
-
-  for (i = 0; i < XPAD_NUM_OUT_PACKETS; i++) {
-    if (++xpad->last_out_packet >= XPAD_NUM_OUT_PACKETS)
-      xpad->last_out_packet = 0;
-
-    pkt = &xpad->out_packets[xpad->last_out_packet];
-    if (pkt->pending) {
-      dev_dbg(&xpad->intf->dev, "%s - found pending output packet %d\n",
-              __func__, xpad->last_out_packet);
-      packet = pkt;
-      break;
-    }
-  }
-
-  if (packet) {
-    memcpy(xpad->odata, packet->data, packet->len);
-    xpad->irq_out->transfer_buffer_length = packet->len;
-    packet->pending = false;
-    return true;
-  }
-
-  return false;
-}
-
 static int xpad_start_input(struct usb_xpad *xpad) {
   if (usb_submit_urb(xpad->irq_in, GFP_KERNEL)) return -EIO;
   return 0;
