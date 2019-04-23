@@ -146,9 +146,6 @@ static void xpad_set_up_abs(struct input_dev *input_dev, signed short abs) {
     case ABS_HAT0Y:
       input_set_abs_params(input_dev, abs, -1, 1, 0, 0);
       break;
-    default:
-      input_set_abs_params(input_dev, abs, 0, 0, 0, 0);
-      break;
   }
 }
 
