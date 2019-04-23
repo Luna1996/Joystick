@@ -150,32 +150,14 @@ static void xpad360_process_packet(struct usb_xpad *xpad, struct input_dev *dev,
   /* valid pad data */
   if (data[0] != 0x00) return;
 
-  /* digital pad */
-  if (xpad->mapping & MAP_DPAD_TO_BUTTONS) {
-    /* dpad as buttons (left, right, up, down) */
-    input_report_key(dev, BTN_TRIGGER_HAPPY1, data[2] & 0x04);
-    input_report_key(dev, BTN_TRIGGER_HAPPY2, data[2] & 0x08);
-    input_report_key(dev, BTN_TRIGGER_HAPPY3, data[2] & 0x01);
-    input_report_key(dev, BTN_TRIGGER_HAPPY4, data[2] & 0x02);
-  }
-
-  /*
-   * This should be a simple else block. However historically
-   * xbox360w has mapped DPAD to buttons while xbox360 did not. This
-   * made no sense, but now we can not just switch back and have to
-   * support both behaviors.
-   */
   input_report_abs(dev, ABS_HAT0X, !!(data[2] & 0x08) - !!(data[2] & 0x04));
   input_report_abs(dev, ABS_HAT0Y, !!(data[2] & 0x02) - !!(data[2] & 0x01));
-
   /* start/back buttons */
   input_report_key(dev, BTN_START, data[2] & 0x10);
   input_report_key(dev, BTN_SELECT, data[2] & 0x20);
-
   /* stick press left/right */
   input_report_key(dev, BTN_THUMBL, data[2] & 0x40);
   input_report_key(dev, BTN_THUMBR, data[2] & 0x80);
-
   /* buttons A,B,X,Y,TL,TR and MODE */
   input_report_key(dev, BTN_A, data[3] & 0x10);
   input_report_key(dev, BTN_B, data[3] & 0x20);
@@ -185,49 +167,15 @@ static void xpad360_process_packet(struct usb_xpad *xpad, struct input_dev *dev,
   input_report_key(dev, BTN_TR, data[3] & 0x02);
   input_report_key(dev, BTN_MODE, data[3] & 0x04);
 
-  if (!(xpad->mapping & MAP_STICKS_TO_NULL)) {
-    /* left stick */
-    input_report_abs(dev, ABS_X, (__s16)le16_to_cpup((__le16 *)(data + 6)));
-    input_report_abs(dev, ABS_Y, ~(__s16)le16_to_cpup((__le16 *)(data + 8)));
+  /* left stick */
+  input_report_abs(dev, ABS_X, (__s16)le16_to_cpup((__le16 *)(data + 6)));
+  input_report_abs(dev, ABS_Y, ~(__s16)le16_to_cpup((__le16 *)(data + 8)));
 
-    /* right stick */
-    input_report_abs(dev, ABS_RX, (__s16)le16_to_cpup((__le16 *)(data + 10)));
-    input_report_abs(dev, ABS_RY, ~(__s16)le16_to_cpup((__le16 *)(data + 12)));
-  }
-
-  /* triggers left/right */
-  if (xpad->mapping & MAP_TRIGGERS_TO_BUTTONS) {
-    input_report_key(dev, BTN_TL2, data[4]);
-    input_report_key(dev, BTN_TR2, data[5]);
-  } else {
-    input_report_abs(dev, ABS_Z, data[4]);
-    input_report_abs(dev, ABS_RZ, data[5]);
-  }
+  /* right stick */
+  input_report_abs(dev, ABS_RX, (__s16)le16_to_cpup((__le16 *)(data + 10)));
+  input_report_abs(dev, ABS_RY, ~(__s16)le16_to_cpup((__le16 *)(data + 12)));
 
   input_sync(dev);
-}
-
-static void xpad_presence_work(struct work_struct *work) {
-  struct usb_xpad *xpad = container_of(work, struct usb_xpad, work);
-  int error;
-
-  if (xpad->pad_present) {
-    error = xpad_init_input(xpad);
-    if (error) {
-      /* complain only, not much else we can do here */
-      dev_err(&xpad->dev->dev, "unable to init device: %d\n", error);
-    } else {
-      rcu_assign_pointer(xpad->x360w_dev, xpad->dev);
-    }
-  } else {
-    RCU_INIT_POINTER(xpad->x360w_dev, NULL);
-    synchronize_rcu();
-    /*
-     * Now that we are sure xpad360w_process_packet is not
-     * using input device we can get rid of it.
-     */
-    xpad_deinit_input(xpad);
-  }
 }
 
 static void xpad_irq_in(struct urb *urb) {
@@ -369,10 +317,7 @@ static int xpad_probe(struct usb_interface *intf,
 
   xpad->udev = udev;
   xpad->intf = intf;
-  xpad->mapping = xpad_device[0].mapping;
-  xpad->xtype = xpad_device[0].xtype;
   xpad->name = xpad_device[0].name;
-  INIT_WORK(&xpad->work, xpad_presence_work);
 
   ep_irq_in = ep_irq_out = NULL;
 
