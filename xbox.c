@@ -41,9 +41,11 @@ struct usb_xpad {
   const char *name; /* name of the device */
 };
 
-static void xpad360_process_packet(struct usb_xpad *xpad, struct input_dev *dev,
-                                   u16 cmd, unsigned char *data) {
-  /* valid pad data */
+static void xpad_irq_in(struct urb *urb) {
+  struct usb_xpad *xpad = urb->context;
+  struct input_dev *dev = xpad->dev;
+  unsigned char *data = xpad->idata;
+
   if (data[0] != 0x00) return;
 
   input_report_abs(dev, ABS_HAT0X, !!(data[2] & 0x08) - !!(data[2] & 0x04));
@@ -75,38 +77,6 @@ static void xpad360_process_packet(struct usb_xpad *xpad, struct input_dev *dev,
   input_report_abs(dev, ABS_RZ, data[5]);
 
   input_sync(dev);
-}
-
-static void xpad_irq_in(struct urb *urb) {
-  struct usb_xpad *xpad = urb->context;
-  struct device *dev = &xpad->intf->dev;
-  int retval, status;
-
-  status = urb->status;
-
-  switch (status) {
-    case 0:
-      /* success */
-      break;
-    case -ECONNRESET:
-    case -ENOENT:
-    case -ESHUTDOWN:
-      /* this urb is terminated, clean up */
-      dev_dbg(dev, "%s - urb shutting down with status: %d\n", __func__,
-              status);
-      return;
-    default:
-      dev_dbg(dev, "%s - nonzero urb status received: %d\n", __func__, status);
-      goto exit;
-  }
-
-  xpad360_process_packet(xpad, xpad->dev, 0, xpad->idata);
-
-exit:
-  retval = usb_submit_urb(urb, GFP_ATOMIC);
-  if (retval)
-    dev_err(dev, "%s - usb_submit_urb failed with result %d\n", __func__,
-            retval);
 }
 
 static int xpad_start_input(struct usb_xpad *xpad) {
