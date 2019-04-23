@@ -352,76 +352,8 @@ static void xpad_irq_out(struct urb *urb) {
   spin_unlock_irqrestore(&xpad->odata_lock, flags);
 }
 
-static int xpad_init_output(struct usb_interface *intf, struct usb_xpad *xpad,
-                            struct usb_endpoint_descriptor *ep_irq_out) {
-  int error;
-
-  init_usb_anchor(&xpad->irq_out_anchor);
-
-  xpad->odata = usb_alloc_coherent(xpad->udev, XPAD_PKT_LEN, GFP_KERNEL,
-                                   &xpad->odata_dma);
-  if (!xpad->odata) return -ENOMEM;
-
-  spin_lock_init(&xpad->odata_lock);
-
-  xpad->irq_out = usb_alloc_urb(0, GFP_KERNEL);
-  if (!xpad->irq_out) {
-    error = -ENOMEM;
-    goto err_free_coherent;
-  }
-
-  usb_fill_int_urb(xpad->irq_out, xpad->udev,
-                   usb_sndintpipe(xpad->udev, ep_irq_out->bEndpointAddress),
-                   xpad->odata, XPAD_PKT_LEN, xpad_irq_out, xpad,
-                   ep_irq_out->bInterval);
-  xpad->irq_out->transfer_dma = xpad->odata_dma;
-  xpad->irq_out->transfer_flags |= URB_NO_TRANSFER_DMA_MAP;
-
-  return 0;
-
-err_free_coherent:
-  usb_free_coherent(xpad->udev, XPAD_PKT_LEN, xpad->odata, xpad->odata_dma);
-  return error;
-}
-
-static void xpad_stop_output(struct usb_xpad *xpad) {
-  if (!usb_wait_anchor_empty_timeout(&xpad->irq_out_anchor, 5000)) {
-    dev_warn(&xpad->intf->dev,
-             "timed out waiting for output URB to complete, killing\n");
-    usb_kill_anchored_urbs(&xpad->irq_out_anchor);
-  }
-}
-
-static void xpad_deinit_output(struct usb_xpad *xpad) {
-  usb_free_urb(xpad->irq_out);
-  usb_free_coherent(xpad->udev, XPAD_PKT_LEN, xpad->odata, xpad->odata_dma);
-}
-
-static void xpadone_ack_mode_report(struct usb_xpad *xpad, u8 seq_num) {
-  unsigned long flags;
-  struct xpad_output_packet *packet = &xpad->out_packets[XPAD_OUT_CMD_IDX];
-  static const u8 mode_report_ack[] = {0x01, 0x20, 0x00, 0x09, 0x00, 0x07, 0x20,
-                                       0x02, 0x00, 0x00, 0x00, 0x00, 0x00};
-
-  spin_lock_irqsave(&xpad->odata_lock, flags);
-
-  packet->len = sizeof(mode_report_ack);
-  memcpy(packet->data, mode_report_ack, packet->len);
-  packet->data[2] = seq_num;
-  packet->pending = true;
-
-  /* Reset the sequence so we send out the ack now */
-  xpad->last_out_packet = -1;
-  xpad_try_sending_next_out_packet(xpad);
-
-  spin_unlock_irqrestore(&xpad->odata_lock, flags);
-}
-
 static int xpad_start_input(struct usb_xpad *xpad) {
-  int error;
-
   if (usb_submit_urb(xpad->irq_in, GFP_KERNEL)) return -EIO;
-
   return 0;
 }
 
@@ -466,7 +398,6 @@ static void xpad_set_up_abs(struct input_dev *input_dev, signed short abs) {
 static void xpad_deinit_input(struct usb_xpad *xpad) {
   if (xpad->input_created) {
     xpad->input_created = false;
-    xpad_led_disconnect(xpad);
     input_unregister_device(xpad->dev);
   }
 }
@@ -528,9 +459,9 @@ static int xpad_probe(struct usb_interface *intf,
 
   xpad->udev = udev;
   xpad->intf = intf;
-  xpad->mapping = xpad_device[i].mapping;
-  xpad->xtype = xpad_device[i].xtype;
-  xpad->name = xpad_device[i].name;
+  xpad->mapping = xpad_device[0].mapping;
+  xpad->xtype = xpad_device[0].xtype;
+  xpad->name = xpad_device[0].name;
   INIT_WORK(&xpad->work, xpad_presence_work);
 
   ep_irq_in = ep_irq_out = NULL;
