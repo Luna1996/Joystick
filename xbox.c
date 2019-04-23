@@ -1882,3 +1882,5 @@ static struct usb_driver xpad_driver = {
 };
 
 module_usb_driver(xpad_driver);
+
+MODULE_LICENSE("GPL");
