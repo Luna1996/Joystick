@@ -1,81 +1,3 @@
-/*
- * X-Box gamepad driver
- *
- * Copyright (c) 2002 Marko Friedemann <mfr@bmx-chemnitz.de>
- *               2004 Oliver Schwartz <Oliver.Schwartz@gmx.de>,
- *                    Steven Toth <steve@toth.demon.co.uk>,
- *                    Franz Lehner <franz@caos.at>,
- *                    Ivan Hawkes <blackhawk@ivanhawkes.com>
- *               2005 Dominic Cerquetti <binary1230@yahoo.com>
- *               2006 Adam Buchbinder <adam.buchbinder@gmail.com>
- *               2007 Jan Kratochvil <honza@jikos.cz>
- *               2010 Christoph Fritz <chf.fritz@googlemail.com>
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
- *
- *
- * This driver is based on:
- *  - information from     http://euc.jp/periphs/xbox-controller.ja.html
- *  - the iForce driver    drivers/char/joystick/iforce.c
- *  - the skeleton-driver  drivers/usb/usb-skeleton.c
- *  - Xbox 360 information http://www.free60.org/wiki/Gamepad
- *  - Xbox One information
- * https://github.com/quantus/xbox-one-controller-protocol
- *
- * Thanks to:
- *  - ITO Takayuki for providing essential xpad information on his website
- *  - Vojtech Pavlik     - iforce driver / input subsystem
- *  - Greg Kroah-Hartman - usb-skeleton driver
- *  - XBOX Linux project - extra USB id's
- *  - Pekka Pöyry (quantus) - Xbox One controller reverse engineering
- *
- * TODO:
- *  - fine tune axes (especially trigger axes)
- *  - fix "analog" buttons (reported as digital now)
- *  - get rumble working
- *  - need USB IDs for other dance pads
- *
- * History:
- *
- * 2002-06-27 - 0.0.1 : first version, just said "XBOX HID controller"
- *
- * 2002-07-02 - 0.0.2 : basic working version
- *  - all axes and 9 of the 10 buttons work (german InterAct device)
- *  - the black button does not work
- *
- * 2002-07-14 - 0.0.3 : rework by Vojtech Pavlik
- *  - indentation fixes
- *  - usb + input init sequence fixes
- *
- * 2002-07-16 - 0.0.4 : minor changes, merge with Vojtech's v0.0.3
- *  - verified the lack of HID and report descriptors
- *  - verified that ALL buttons WORK
- *  - fixed d-pad to axes mapping
- *
- * 2002-07-17 - 0.0.5 : simplified d-pad handling
- *
- * 2004-10-02 - 0.0.6 : DDR pad support
- *  - borrowed from the XBOX linux kernel
- *  - USB id's for commonly used dance pads are present
- *  - dance pads will map D-PAD to buttons, not axes
- *  - pass the module paramater 'dpad_to_buttons' to force
- *    the D-PAD to map to buttons if your pad is not detected
- *
- * Later changes can be tracked in SCM.
- */
-
 #include <linux/input.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
@@ -1872,17 +1794,10 @@ static int xpad_resume(struct usb_interface *intf) {
 }
 
 static struct usb_driver xpad_driver = {
-    .name = "xpad",
+    .name = "xbox",
     .probe = xpad_probe,
     .disconnect = xpad_disconnect,
-    .suspend = xpad_suspend,
-    .resume = xpad_resume,
-    .reset_resume = xpad_resume,
     .id_table = xpad_table,
 };
 
 module_usb_driver(xpad_driver);
-
-MODULE_AUTHOR("Marko Friedemann <mfr@bmx-chemnitz.de>");
-MODULE_DESCRIPTION("X-Box pad driver");
-MODULE_LICENSE("GPL");
