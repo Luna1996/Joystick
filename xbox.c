@@ -9,73 +9,6 @@
 
 #define XPAD_PKT_LEN 64
 
-#define MAP_DPAD_TO_BUTTONS (1 << 0)
-#define MAP_TRIGGERS_TO_BUTTONS (1 << 1)
-#define MAP_STICKS_TO_NULL (1 << 2)
-#define DANCEPAD_MAP_CONFIG \
-  (MAP_DPAD_TO_BUTTONS | MAP_TRIGGERS_TO_BUTTONS | MAP_STICKS_TO_NULL)
-
-static const struct xpad_device {
-  u16 idVendor;
-  u16 idProduct;
-  char *name;
-  u8 mapping;
-  u8 xtype;
-} xpad_device[] = {{0x045e, 0x028e, "XBOX 360 PAD - CSE 522S", 0, 1}};
-
-/* buttons shared with xbox and xbox360 */
-static const signed short xpad_common_btn[] = {
-    BTN_A,     BTN_B,      BTN_X,      BTN_Y,      /* "analog" buttons */
-    BTN_START, BTN_SELECT, BTN_THUMBL, BTN_THUMBR, /* start/back/sticks */
-    -1                                             /* terminating entry */
-};
-
-/* original xbox controllers only */
-static const signed short xpad_btn[] = {
-    BTN_C, BTN_Z, /* "analog" buttons */
-    -1            /* terminating entry */
-};
-
-/* used when dpad is mapped to buttons */
-static const signed short xpad_btn_pad[] = {
-    BTN_TRIGGER_HAPPY1, BTN_TRIGGER_HAPPY2, /* d-pad left, right */
-    BTN_TRIGGER_HAPPY3, BTN_TRIGGER_HAPPY4, /* d-pad up, down */
-    -1                                      /* terminating entry */
-};
-
-/* used when triggers are mapped to buttons */
-static const signed short xpad_btn_triggers[] = {
-    BTN_TL2, BTN_TR2, /* triggers left/right */
-    -1};
-
-static const signed short xpad360_btn[] = {/* buttons for x360 controller */
-                                           BTN_TL, BTN_TR, /* Button LB/RB */
-                                           BTN_MODE, /* The big X button */
-                                           -1};
-
-static const signed short xpad_abs[] = {
-    ABS_X, ABS_Y,   /* left stick */
-    ABS_RX, ABS_RY, /* right stick */
-    -1              /* terminating entry */
-};
-
-/* used when dpad is mapped to axes */
-static const signed short xpad_abs_pad[] = {
-    ABS_HAT0X, ABS_HAT0Y, /* d-pad axes */
-    -1                    /* terminating entry */
-};
-
-/* used when triggers are mapped to axes */
-static const signed short xpad_abs_triggers[] = {
-    ABS_Z, ABS_RZ, /* triggers left/right */
-    -1};
-
-/*
- * Xbox 360 has a vendor-specific class, so we cannot match it with only
- * USB_INTERFACE_INFO (also specifically refused by USB subsystem), so we
- * match against vendor id as well. Wired Xbox 360 devices have protocol 1,
- * wireless controllers have protocol 129.
- */
 #define XPAD_XBOX360_VENDOR_PROTOCOL(vend, pr)                              \
   .match_flags = USB_DEVICE_ID_MATCH_VENDOR | USB_DEVICE_ID_MATCH_INT_INFO, \
   .idVendor = (vend), .bInterfaceClass = USB_CLASS_VENDOR_SPEC,             \
@@ -85,12 +18,6 @@ static const signed short xpad_abs_triggers[] = {
     XPAD_XBOX360_VENDOR_PROTOCOL((vend), 129)  \
   }
 
-struct xpad_output_packet {
-  u8 data[XPAD_PKT_LEN];
-  u8 len;
-  bool pending;
-};
-
 #define XPAD_OUT_CMD_IDX 0
 #define XPAD_OUT_FF_IDX 1
 #define XPAD_OUT_LED_IDX (1 + IS_ENABLED(CONFIG_JOYSTICK_XPAD_FF))
@@ -99,51 +26,20 @@ struct xpad_output_packet {
    IS_ENABLED(CONFIG_JOYSTICK_XPAD_LEDS))
 
 struct usb_xpad {
-  struct input_dev *dev; /* input device interface */
-  struct input_dev __rcu *x360w_dev;
+  struct input_dev *dev;      /* input device interface */
   struct usb_device *udev;    /* usb device */
   struct usb_interface *intf; /* usb interface */
 
-  bool pad_present;
   bool input_created;
 
   struct urb *irq_in;   /* urb for interrupt in report */
   unsigned char *idata; /* input data */
   dma_addr_t idata_dma;
 
-  struct urb *irq_out; /* urb for interrupt out report */
-  struct usb_anchor irq_out_anchor;
-  bool irq_out_active;  /* we must not use an active URB */
-  u8 odata_serial;      /* serial number for xbox one protocol */
-  unsigned char *odata; /* output data */
-  dma_addr_t odata_dma;
-  spinlock_t odata_lock;
-
-  struct xpad_output_packet out_packets[XPAD_NUM_OUT_PACKETS];
-  int last_out_packet;
-  int init_seq;
-
   char phys[64]; /* physical device path */
 
-  int mapping;             /* map d-pad to buttons or to axes */
-  int xtype;               /* type of xbox device */
-  int pad_nr;              /* the order x360 pads were attached */
-  const char *name;        /* name of the device */
-  struct work_struct work; /* init/remove device from callback */
+  const char *name; /* name of the device */
 };
-
-static int xpad_init_input(struct usb_xpad *xpad);
-static void xpad_deinit_input(struct usb_xpad *xpad);
-
-/*
- *	xpad360_process_packet
- *
- *	Completes a request by converting the data into events for the
- *	input subsystem. It is version for xbox 360 controller
- *
- *	The used report descriptor was taken from:
- *		http://www.free60.org/wiki/Gamepad
- */
 
 static void xpad360_process_packet(struct usb_xpad *xpad, struct input_dev *dev,
                                    u16 cmd, unsigned char *data) {
@@ -166,7 +62,6 @@ static void xpad360_process_packet(struct usb_xpad *xpad, struct input_dev *dev,
   input_report_key(dev, BTN_TL, data[3] & 0x01);
   input_report_key(dev, BTN_TR, data[3] & 0x02);
   input_report_key(dev, BTN_MODE, data[3] & 0x04);
-
   /* left stick */
   input_report_abs(dev, ABS_X, (__s16)le16_to_cpup((__le16 *)(data + 6)));
   input_report_abs(dev, ABS_Y, ~(__s16)le16_to_cpup((__le16 *)(data + 8)));
@@ -264,12 +159,25 @@ static void xpad_deinit_input(struct usb_xpad *xpad) {
   }
 }
 
+static const signed short xpad_common_btn[] = {
+    BTN_A,     BTN_B,      BTN_X,      BTN_Y,      /* "analog" buttons */
+    BTN_START, BTN_SELECT, BTN_THUMBL, BTN_THUMBR, /* start/back/sticks */
+    BTN_TL,    BTN_TR,                             /* Button LB/RB */
+    BTN_MODE                                       /* The big X button */
+};
+
+static const signed short xpad_abs[] = {
+    ABS_X,     ABS_Y,     /* left stick */
+    ABS_RX,    ABS_RY,    /* right stick */
+    ABS_HAT0X, ABS_HAT0Y, /* d-pad axes */
+    ABS_Z,     ABS_RZ,    /* triggers left/right */
+};
+
 static int xpad_init_input(struct usb_xpad *xpad) {
   struct input_dev *input_dev;
-  int i, error;
+  int i;
 
   input_dev = input_allocate_device();
-  if (!input_dev) return -ENOMEM;
 
   xpad->dev = input_dev;
   input_dev->name = xpad->name;
@@ -283,21 +191,12 @@ static int xpad_init_input(struct usb_xpad *xpad) {
   input_dev->open = xpad_open;
   input_dev->close = xpad_close;
 
-  for (i = 0; xpad_abs[i] >= 0; i++) xpad_set_up_abs(input_dev, xpad_abs[i]);
+  for (i = 0; i < 8; i++) xpad_set_up_abs(input_dev, xpad_abs[i]);
 
-  for (i = 0; xpad_common_btn[i] >= 0; i++)
+  for (i = 0; i < 11; i++)
     input_set_capability(input_dev, EV_KEY, xpad_common_btn[i]);
 
-  for (i = 0; xpad360_btn[i] >= 0; i++)
-    input_set_capability(input_dev, EV_KEY, xpad360_btn[i]);
-
-  for (i = 0; xpad_abs_pad[i] >= 0; i++)
-    xpad_set_up_abs(input_dev, xpad_abs_pad[i]);
-
-  for (i = 0; xpad_abs_triggers[i] >= 0; i++)
-    xpad_set_up_abs(input_dev, xpad_abs_triggers[i]);
-
-  error = input_register_device(xpad->dev);
+  input_register_device(xpad->dev);
   xpad->input_created = true;
   return 0;
 }
@@ -321,7 +220,7 @@ static int xpad_probe(struct usb_interface *intf,
 
   xpad->udev = udev;
   xpad->intf = intf;
-  xpad->name = xpad_device[0].name;
+  xpad->name = "XBOX 360 PAD - CSE 522S";
 
   ep_irq_in = ep_irq_out = NULL;
 
