@@ -18,13 +18,6 @@
     XPAD_XBOX360_VENDOR_PROTOCOL((vend), 129)  \
   }
 
-#define XPAD_OUT_CMD_IDX 0
-#define XPAD_OUT_FF_IDX 1
-#define XPAD_OUT_LED_IDX (1 + IS_ENABLED(CONFIG_JOYSTICK_XPAD_FF))
-#define XPAD_NUM_OUT_PACKETS                 \
-  (1 + IS_ENABLED(CONFIG_JOYSTICK_XPAD_FF) + \
-   IS_ENABLED(CONFIG_JOYSTICK_XPAD_LEDS))
-
 struct usb_xpad {
   struct input_dev *dev;      /* input device interface */
   struct usb_device *udev;    /* usb device */
@@ -44,42 +37,12 @@ struct usb_xpad {
 static void xpad360_process_packet(struct usb_xpad *xpad, struct input_dev *dev,
                                    u16 cmd, unsigned char *data) {
   /* valid pad data */
-  if (data[0] != 0x00) return;
-
-  input_report_abs(dev, ABS_HAT0X, !!(data[2] & 0x08) - !!(data[2] & 0x04));
-  input_report_abs(dev, ABS_HAT0Y, !!(data[2] & 0x02) - !!(data[2] & 0x01));
-  /* start/back buttons */
-  input_report_key(dev, BTN_START, data[2] & 0x10);
-  input_report_key(dev, BTN_SELECT, data[2] & 0x20);
-  /* stick press left/right */
-  input_report_key(dev, BTN_THUMBL, data[2] & 0x40);
-  input_report_key(dev, BTN_THUMBR, data[2] & 0x80);
-  /* buttons A,B,X,Y,TL,TR and MODE */
-  input_report_key(dev, BTN_A, data[3] & 0x10);
-  input_report_key(dev, BTN_B, data[3] & 0x20);
-  input_report_key(dev, BTN_X, data[3] & 0x40);
-  input_report_key(dev, BTN_Y, data[3] & 0x80);
-  input_report_key(dev, BTN_TL, data[3] & 0x01);
-  input_report_key(dev, BTN_TR, data[3] & 0x02);
-  input_report_key(dev, BTN_MODE, data[3] & 0x04);
-  /* left stick */
-  input_report_abs(dev, ABS_X, (__s16)le16_to_cpup((__le16 *)(data + 6)));
-  input_report_abs(dev, ABS_Y, ~(__s16)le16_to_cpup((__le16 *)(data + 8)));
-
-  /* right stick */
-  input_report_abs(dev, ABS_RX, (__s16)le16_to_cpup((__le16 *)(data + 10)));
-  input_report_abs(dev, ABS_RY, ~(__s16)le16_to_cpup((__le16 *)(data + 12)));
-
-  /* triggers left/right */
-  input_report_abs(dev, ABS_Z, data[4]);
-  input_report_abs(dev, ABS_RZ, data[5]);
-
-  input_sync(dev);
 }
 
 static void xpad_irq_in(struct urb *urb) {
   struct usb_xpad *xpad = urb->context;
-  struct device *dev = &xpad->intf->dev;
+  struct input_dev *dev = xpad->dev;
+  unsigned char *data = xpad->idata;
   int retval, status;
 
   status = urb->status;
@@ -87,18 +50,47 @@ static void xpad_irq_in(struct urb *urb) {
   switch (status) {
     case 0:
       /* success */
+      if (data[0] != 0x00) break;
+
+      input_report_abs(dev, ABS_HAT0X, !!(data[2] & 0x08) - !!(data[2] & 0x04));
+      input_report_abs(dev, ABS_HAT0Y, !!(data[2] & 0x02) - !!(data[2] & 0x01));
+      /* start/back buttons */
+      input_report_key(dev, BTN_START, data[2] & 0x10);
+      input_report_key(dev, BTN_SELECT, data[2] & 0x20);
+      /* stick press left/right */
+      input_report_key(dev, BTN_THUMBL, data[2] & 0x40);
+      input_report_key(dev, BTN_THUMBR, data[2] & 0x80);
+      /* buttons A,B,X,Y,TL,TR and MODE */
+      input_report_key(dev, BTN_A, data[3] & 0x10);
+      input_report_key(dev, BTN_B, data[3] & 0x20);
+      input_report_key(dev, BTN_X, data[3] & 0x40);
+      input_report_key(dev, BTN_Y, data[3] & 0x80);
+      input_report_key(dev, BTN_TL, data[3] & 0x01);
+      input_report_key(dev, BTN_TR, data[3] & 0x02);
+      input_report_key(dev, BTN_MODE, data[3] & 0x04);
+      /* left stick */
+      input_report_abs(dev, ABS_X, (__s16)le16_to_cpup((__le16 *)(data + 6)));
+      input_report_abs(dev, ABS_Y, ~(__s16)le16_to_cpup((__le16 *)(data + 8)));
+
+      /* right stick */
+      input_report_abs(dev, ABS_RX, (__s16)le16_to_cpup((__le16 *)(data + 10)));
+      input_report_abs(dev, ABS_RY,
+                       ~(__s16)le16_to_cpup((__le16 *)(data + 12)));
+
+      /* triggers left/right */
+      input_report_abs(dev, ABS_Z, data[4]);
+      input_report_abs(dev, ABS_RZ, data[5]);
+
+      input_sync(dev);
       break;
     case -ECONNRESET:
     case -ENOENT:
     case -ESHUTDOWN:
       /* this urb is terminated, clean up */
       return;
-    default:
-      retval = usb_submit_urb(urb, GFP_ATOMIC);
-      return;
   }
 
-  xpad360_process_packet(xpad, xpad->dev, 0, xpad->idata);
+  retval = usb_submit_urb(urb, GFP_ATOMIC);
 }
 
 static int xpad_start_input(struct usb_xpad *xpad) {
