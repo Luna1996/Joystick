@@ -40,7 +40,7 @@ static void xpad_irq_in(struct urb *urb) {
   unsigned char *data = xpad->idata;
   /* valid pad data */
   if (data[0] != 0x00) return;
-  printk("input!\n");
+  // printk("input!\n");
 
   // start/back buttons
   input_report_key(dev, BTN_START, data[2] & 0x10);
