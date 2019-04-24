@@ -112,9 +112,11 @@ hist=(char**)malloc(sizeof(char*)*histLen);
     }
     printf("%s",buf);
     strcpy(hist[start],buf);
+    start++;
     if(start>=histLen){
       start=0;
     }
+    
   }
   return 0;
 }
