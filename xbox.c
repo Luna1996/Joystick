@@ -132,9 +132,6 @@ static int xpad_init_input(struct usb_xpad *xpad) {
   input_dev = input_allocate_device();
 
   xpad->dev = input_dev;
-  printk("input_dev.name = %s\n", xpad->dev->name);
-  printk("input_dev.phys = %s\n", xpad->dev->phys);
-  printk("input_dev.uniq = %s\n", xpad->dev->uniq);
   input_dev->name = xpad->name;
   input_dev->phys = xpad->phys;
   usb_to_input_id(xpad->udev, &input_dev->id);
@@ -151,7 +148,11 @@ static int xpad_init_input(struct usb_xpad *xpad) {
   for (i = 0; i < 11; i++)
     input_set_capability(input_dev, EV_KEY, xpad_common_btn[i]);
 
-  error = input_register_device(xpad->dev);
+  error = input_register_device(input_dev);
+  printk("input_dev.name = %s\n", input_dev->name);
+  printk("input_dev.phys = %s\n", input_dev->phys);
+  printk("input_dev.uniq = %s\n", input_dev->uniq);
+  printk("input_dev.id = %d\n", input_dev->id);
   xpad->input_created = true;
   return 0;
 }
