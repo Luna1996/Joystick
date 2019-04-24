@@ -39,8 +39,8 @@ typedef struct {
 #define JS_TMAX 255
 #define JS_XYMAX 32768
 
-char btns[11][5] = {"A",    "B",    "X",    "Y",  "LB", "RB",
-                    "BACK", "MENU", "HOME", "LS", "RS"};
+char btns[15][5] = {"A", "B", "",     "X",    "Y",    "",   "LB", "RB",
+                    "",  "",  "BACK", "MENU", "HOME", "LS", "RS"};
 char axis[6][3] = {"LX", "LY", "LT", "RX", "RY", "RT"};
 char dpad[2][2][6] = {{"LEFT", "RIGHT"}, {"UP", "DOWN"}};
 
