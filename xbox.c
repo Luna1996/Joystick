@@ -37,6 +37,7 @@ static void xpad_irq_in(struct urb *urb) {
     case 0:
       /* success */
       if (data[0] != 0x00) break;
+      /* D-pad axis*/
       input_report_abs(dev, ABS_HAT0X, !!(data[2] & 0x08) - !!(data[2] & 0x04));
       input_report_abs(dev, ABS_HAT0Y, !!(data[2] & 0x02) - !!(data[2] & 0x01));
       /* start/back buttons */
