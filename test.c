@@ -67,7 +67,8 @@ int main(int argc, char **argv) {
       printf("Button[%s] %s\n", btns[code - JS_A],
              value ? "pressed" : "released");
     } else {
-      printf("D-[%s] %s\n", dpad[code - JS_DX][(value + 1) / 2],
+      printf("D-[%s] %s\n",
+             (value == 0) ? "??" : dpad[code - JS_DX][(value + 1) / 2],
              (value == 0) ? "released" : "pressed");
     }
   }
