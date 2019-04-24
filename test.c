@@ -36,23 +36,19 @@ typedef struct {
 #define JS_DX 0x0010
 #define JS_DY 0x0011
 
-#define JS_TMAX   255
-#define JS_XYMAX  32768
+#define JS_TMAX 255
+#define JS_XYMAX 32768
 
 int main(int argc, char **argv) {
   int fd, s;
-  if (argc < 2) {
-    printf("usage: %s \n", argv[0]);
-    return 1;
-  }
-  fd = open(argv[1], O_RDONLY);
+  char path[64];
+  sscanf(path, "/dev/input/event%s", argc == 2 ? argv[1] : "2");
+  fd = open(path, O_RDONLY);
   js_event ev[2];
 
   while (1) {
     s = read(fd, ev, 32);
     printf("sec:%08x usec:%08x type:%04x code:%04x value:%d\n", ev[0].sec,
            ev[0].usec, ev[0].type, ev[0].code, ev[0].value);
-    // for (int i = 0; i < s; i++) printf("%02x ", ev[i]);
-    // printf("\n");
   }
 }
