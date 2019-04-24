@@ -100,16 +100,16 @@ int main(int argc, char** argv) {
       printf("Axis[%s] value change:%d\n", axis[code - JS_LX], value);
     } else if (code > JS_DY) {
       printf("Button[%s] %s\n", btns[code - JS_A],
-              value ? "pressed" : "released");
+             value ? "pressed" : "released");
     } else {
       printf("D-[%s] %s\n",
-              dpad[code - JS_DX]
-                  [(((value == 0) ? dpadv[code - JS_DX] : value) + 1) / 2],
-              (value == 0) ? "released" : "pressed");
+             dpad[code - JS_DX]
+                 [(((value == 0) ? dpadv[code - JS_DX] : value) + 1) / 2],
+             (value == 0) ? "released" : "pressed");
       dpadv[code - JS_DX] = value;
     }
-    sprintf(buf,"%u %u %x %x %x%\n", 
-    ev[0].sec, ev[0].usec,ev[0].type,ev[0].code,ev[0].value);
+    sprintf(buf, "%08x %08x %01x %04x %d\n", ev[0].sec, ev[0].usec, ev[0].type,
+            ev[0].code, ev[0].value);
     strcpy(hist[start], buf);
     start++;
     if (start >= histLen) {
