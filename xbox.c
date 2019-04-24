@@ -152,7 +152,6 @@ static int xpad_init_input(struct usb_xpad *xpad) {
   printk("input_dev.name = %s\n", input_dev->name);
   printk("input_dev.phys = %s\n", input_dev->phys);
   printk("input_dev.uniq = %s\n", input_dev->uniq);
-  printk("input_dev.id = %d\n", input_dev->id);
   xpad->input_created = true;
   return 0;
 }
