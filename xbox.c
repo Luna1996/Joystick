@@ -9,15 +9,6 @@
 
 #define XPAD_PKT_LEN 64
 
-#define XPAD_XBOX360_VENDOR_PROTOCOL(vend, pr)                              \
-  .match_flags = USB_DEVICE_ID_MATCH_VENDOR | USB_DEVICE_ID_MATCH_INT_INFO, \
-  .idVendor = (vend), .bInterfaceClass = USB_CLASS_VENDOR_SPEC,             \
-  .bInterfaceSubClass = 93, .bInterfaceProtocol = (pr)
-#define XPAD_XBOX360_VENDOR(vend)              \
-  {XPAD_XBOX360_VENDOR_PROTOCOL((vend), 1)}, { \
-    XPAD_XBOX360_VENDOR_PROTOCOL((vend), 129)  \
-  }
-
 struct usb_xpad {
   struct input_dev *dev;      /* input device interface */
   struct usb_device *udev;    /* usb device */
@@ -82,6 +73,8 @@ static void xpad_irq_in(struct urb *urb) {
     case -ENOENT:
     case -ESHUTDOWN:
       /* this urb is terminated, clean up */
+      return;
+    default:
       return;
   }
 
@@ -220,8 +213,13 @@ static void xpad_disconnect(struct usb_interface *intf) {
   usb_set_intfdata(intf, NULL);
 }
 
-static const struct usb_device_id xpad_table[] = {XPAD_XBOX360_VENDOR(0x045e),
-                                                  {}};
+static const struct usb_device_id xbox360 = {
+    .match_flags = USB_DEVICE_ID_MATCH_VENDOR | USB_DEVICE_ID_MATCH_INT_INFO,
+    .idVendor = 0x045e,
+    .bInterfaceClass = USB_CLASS_VENDOR_SPEC,
+    .bInterfaceSubClass = 93,
+    .bInterfaceProtocol = 1};
+static const struct usb_device_id xpad_table[] = {xbox360};
 
 MODULE_DEVICE_TABLE(usb, xpad_table);
 
