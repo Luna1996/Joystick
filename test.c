@@ -1,6 +1,10 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <signal.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/un.h>
 #include "types.h"
 
 typedef struct {
@@ -44,6 +48,30 @@ char btns[15][5] = {"A", "B", "",     "X",    "Y",    "",   "LB", "RB",
 char axis[6][3] = {"LX", "LY", "LT", "RX", "RY", "RT"};
 char dpad[2][2][6] = {{"LEFT", "RIGHT"}, {"UP", "DOWN"}};
 
+#define histLen 1000
+#define evSize 256
+char ** hist=NULL;
+int start=0;
+
+
+void sigint_handler(int signum) {
+  FILE* fp = fopen("log.txt","wa");
+  if(!fp){
+    fprintf(stderr,"Couldnt open log file\n");
+    exit(0);
+  }
+  for(int i =start;i<histLen+start;i++){
+    fprintf(fp, "%s", hist[i%histLen]);
+    free(hist[i%histLen]);
+  }
+  free(hist);
+  fclose(fp);
+  exit(0);
+}
+
+
+
+
 int main(int argc, char **argv) {
   int fd, s;
   char path[64];
@@ -51,10 +79,21 @@ int main(int argc, char **argv) {
   u16 code;
   i32 value;
   i32 dpadv;
+
+  struct sigaction ss;
+  ss.sa_handler = sigint_handler;
+  ss.sa_flags   = SA_RESTART;
+  sigaction(SIGINT, &ss, NULL);
+
+hist=(char**)malloc(sizeof(char*)*histLen);
+  for(int i =0;i<histLen;i++){
+    hist[i]=(char*)calloc(1,evSize);
+  }
+
   sprintf(path, "/dev/input/event%s", (argc == 2) ? argv[1] : "2");
   fd = open(path, O_RDONLY);
   js_event ev[2];
-
+  char buf[256]=""; 
   while (1) {
     s = read(fd, ev, 32);
     type = ev[0].type;
@@ -62,14 +101,19 @@ int main(int argc, char **argv) {
     code = ev[0].code;
     value = ev[0].value;
     if (code >= JS_LX && code <= JS_RT) {
-      printf("Axis[%s] value change:%d\n", axis[code - JS_LX], value);
+      sprintf(buf,"Axis[%s] value change:%d\n", axis[code - JS_LX], value);
     } else if (code > JS_DY) {
-      printf("Button[%s] %s\n", btns[code - JS_A],
+      sprintf(buf,"Button[%s] %s\n", btns[code - JS_A],
              value ? "pressed" : "released");
     } else {
-      printf("D-[%s] %s\n",
+      sprintf(buf,"D-[%s] %s\n",
              (value == 0) ? "??" : dpad[code - JS_DX][(value + 1) / 2],
              (value == 0) ? "released" : "pressed");
+    }
+    printf("%s",buf);
+    strcpy(hist[start],buf);
+    if(start>=histLen){
+      start=0;
     }
   }
   return 0;
