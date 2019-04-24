@@ -218,7 +218,8 @@ static const struct usb_device_id xpad_table[] = {
      .idVendor = 0x045e,
      .bInterfaceClass = USB_CLASS_VENDOR_SPEC,
      .bInterfaceSubClass = 93,
-     .bInterfaceProtocol = 1}};
+     .bInterfaceProtocol = 1},
+    {}};
 
 MODULE_DEVICE_TABLE(usb, xpad_table);
 
