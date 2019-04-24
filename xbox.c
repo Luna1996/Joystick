@@ -149,13 +149,7 @@ static int xpad_init_input(struct usb_xpad *xpad) {
     input_set_capability(input_dev, EV_KEY, xpad_common_btn[i]);
 
   error = input_register_device(input_dev);
-  if (input_dev->grab) {
-    if (input_dev->grab->handler)
-      printk("handler:%s\n", input_dev->grab->handler->name);
-    else
-      printk("1\n");
-  } else
-    printk("2\n");
+  printk("id:%d\n", input_dev->id);
 
   xpad->input_created = true;
   return 0;
