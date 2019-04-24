@@ -97,18 +97,19 @@ int main(int argc, char** argv) {
     code = ev[0].code;
     value = ev[0].value;
     if (code >= JS_LX && code <= JS_RT) {
-      sprintf(buf, "Axis[%s] value change:%d\n", axis[code - JS_LX], value);
+      printf("Axis[%s] value change:%d\n", axis[code - JS_LX], value);
     } else if (code > JS_DY) {
-      sprintf(buf, "Button[%s] %s\n", btns[code - JS_A],
+      printf("Button[%s] %s\n", btns[code - JS_A],
               value ? "pressed" : "released");
     } else {
-      sprintf(buf, "D-[%s] %s\n",
+      printf("D-[%s] %s\n",
               dpad[code - JS_DX]
                   [(((value == 0) ? dpadv[code - JS_DX] : value) + 1) / 2],
               (value == 0) ? "released" : "pressed");
       dpadv[code - JS_DX] = value;
     }
-    printf("%s", buf);
+    sprintf(buf,"%u %u %x %x %x%\n", 
+    ev[0].sec, ev[0].usec,ev[0].type,ev[0].code,ev[0].value);
     strcpy(hist[start], buf);
     start++;
     if (start >= histLen) {
