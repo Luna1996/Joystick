@@ -39,17 +39,37 @@ typedef struct {
 #define JS_TMAX 255
 #define JS_XYMAX 32768
 
+char btns[11][5] = {"A",    "B",    "X",    "Y",  "LB", "RB",
+                    "BACK", "MENU", "HOME", "LS", "RS"};
+char axis[6][3] = {"LX", "LY", "LT", "RX", "RY", "RT"};
+char dpad[2][2][6] = {{"LEFT", "RIGHT"}, {"UP", "DOWN"}};
+
 int main(int argc, char **argv) {
   int fd, s;
   char path[64];
+  u16 type;
+  u16 code;
+  i32 value;
+  i32 dpadv;
   sprintf(path, "/dev/input/event%s", (argc == 2) ? argv[1] : "2");
   fd = open(path, O_RDONLY);
   js_event ev[2];
 
   while (1) {
     s = read(fd, ev, 32);
-    printf("sec:%08x usec:%08x type:%04x code:%04x value:%d\n", ev[0].sec,
-           ev[0].usec, ev[0].type, ev[0].code, ev[0].value);
+    type = ev[0].type;
+    if (!type) continue;
+    code = ev[0].code;
+    value = ev[0].value;
+    if (code >= JS_LX && code <= JS_RT) {
+      printf("Axis[%s] value change:%d\n", axis[code - JS_LX], value);
+    } else if (code > JS_DY) {
+      printf("Button[%s] %s\n", btns[code - JS_A],
+             value ? "pressed" : "released");
+    } else {
+      printf("D-[%s] %s\n", dpad[code - JS_DX][(value + 1) / 2],
+             (value == 0) ? "released" : "pressed");
+    }
   }
   return 0;
 }
