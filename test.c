@@ -42,7 +42,9 @@ typedef struct {
 int main(int argc, char **argv) {
   int fd, s;
   char path[64];
-  sscanf(path, "/dev/input/event%s", argc == 2 ? argv[1] : "2");
+  sscanf(path, "/dev/input/event%s", (argc == 2) ? argv[1] : "2");
+  printf(path);
+  return 0;
   fd = open(path, O_RDONLY);
   js_event ev[2];
 
@@ -51,4 +53,5 @@ int main(int argc, char **argv) {
     printf("sec:%08x usec:%08x type:%04x code:%04x value:%d\n", ev[0].sec,
            ev[0].usec, ev[0].type, ev[0].code, ev[0].value);
   }
+  return 0;
 }
