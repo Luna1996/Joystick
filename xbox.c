@@ -213,13 +213,12 @@ static void xpad_disconnect(struct usb_interface *intf) {
   usb_set_intfdata(intf, NULL);
 }
 
-static const struct usb_device_id xbox360 = {
-    .match_flags = USB_DEVICE_ID_MATCH_VENDOR | USB_DEVICE_ID_MATCH_INT_INFO,
-    .idVendor = 0x045e,
-    .bInterfaceClass = USB_CLASS_VENDOR_SPEC,
-    .bInterfaceSubClass = 93,
-    .bInterfaceProtocol = 1};
-static const struct usb_device_id xpad_table[] = {xbox360};
+static const struct usb_device_id xpad_table[] = {
+    {.match_flags = USB_DEVICE_ID_MATCH_VENDOR | USB_DEVICE_ID_MATCH_INT_INFO,
+     .idVendor = 0x045e,
+     .bInterfaceClass = USB_CLASS_VENDOR_SPEC,
+     .bInterfaceSubClass = 93,
+     .bInterfaceProtocol = 1}};
 
 MODULE_DEVICE_TABLE(usb, xpad_table);
 
