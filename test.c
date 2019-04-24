@@ -102,11 +102,11 @@ int main(int argc, char** argv) {
       sprintf(buf, "Button[%s] %s\n", btns[code - JS_A],
               value ? "pressed" : "released");
     } else {
-      dpadv[code - JS_DX] = value;
       sprintf(buf, "D-[%s] %s\n",
               dpad[code - JS_DX]
                   [(((value == 0) ? dpadv[code - JS_DX] : value) + 1) / 2],
               (value == 0) ? "released" : "pressed");
+      dpadv[code - JS_DX] = value;
     }
     printf("%s", buf);
     strcpy(hist[start], buf);
