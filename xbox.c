@@ -37,7 +37,6 @@ static void xpad_irq_in(struct urb *urb) {
     case 0:
       /* success */
       if (data[0] != 0x00) break;
-      printk("input!\n");
       input_report_abs(dev, ABS_HAT0X, !!(data[2] & 0x08) - !!(data[2] & 0x04));
       input_report_abs(dev, ABS_HAT0Y, !!(data[2] & 0x02) - !!(data[2] & 0x01));
       /* start/back buttons */
@@ -133,6 +132,11 @@ static int xpad_init_input(struct usb_xpad *xpad) {
   input_dev = input_allocate_device();
 
   xpad->dev = input_dev;
+  printk("input_dev.name = %s\n", xpad->dev->name);
+  printk("input_dev.phys = %s\n", xpad->dev->phys);
+  printk("input_dev.uniq = %s\n", xpad->dev->uniq);
+  printk("input_dev.grab.name = %s\n", xpad->dev->grab->name);
+  printk("input_dev.grab.handler.name = %s\n", xpad->dev->grab->handler->name);
   input_dev->name = xpad->name;
   input_dev->phys = xpad->phys;
   usb_to_input_id(xpad->udev, &input_dev->id);
