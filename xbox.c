@@ -25,6 +25,22 @@ struct usb_xpad {
   const char *name; /* name of the device */
 };
 
+#define DPAD_SHIFT_LEFT 0x01
+#define DPAD_SHIFT_RIGHT 0x02
+#define DPAD_SHIFT_UP 0x04
+#define DPAD_SHIFT_DONW 0x08
+#define START_SHIFT 0x10
+#define SELECT_SHIFT 0x20
+#define LT_SHIFT 0x40
+#define RT_SHIFT 0x80
+#define BUTTON_A_SHIFT 0x10
+#define BUTTON_B_SHIFT 0x20
+#define BUTTON_X_SHIFT 0x40
+#define BUTTON_Y_SHIFT 0x80
+#define BUTTON_TL_SHIFT 0x01
+#define BUTTON_TR_SHIFT 0x02
+#define BUTTON_MODE_SHIFT 0x04
+
 static void xpad_irq_in(struct urb *urb) {
   struct usb_xpad *xpad = urb->context;
   struct input_dev *dev = xpad->dev;
@@ -38,22 +54,26 @@ static void xpad_irq_in(struct urb *urb) {
       /* success */
       if (data[0] != 0x00) break;
       /* D-pad axis*/
-      input_report_abs(dev, ABS_HAT0X, !!(data[2] & 0x08) - !!(data[2] & 0x04));
-      input_report_abs(dev, ABS_HAT0Y, !!(data[2] & 0x02) - !!(data[2] & 0x01));
+      input_report_abs(
+          dev, ABS_HAT0X,
+          !!(data[2] & DPAD_SHIFT_DONW) - !!(data[2] & DPAD_SHIFT_UP));
+      input_report_abs(
+          dev, ABS_HAT0Y,
+          !!(data[2] & DPAD_SHIFT_RIGHT) - !!(data[2] & DPAD_SHIFT_LEFT));
       /* start/back buttons */
-      input_report_key(dev, BTN_START, data[2] & 0x10);
-      input_report_key(dev, BTN_SELECT, data[2] & 0x20);
+      input_report_key(dev, BTN_START, data[2] & START_SHIFT);
+      input_report_key(dev, BTN_SELECT, data[2] & SELECT_SHIFT);
       /* stick press left/right */
-      input_report_key(dev, BTN_THUMBL, data[2] & 0x40);
-      input_report_key(dev, BTN_THUMBR, data[2] & 0x80);
+      input_report_key(dev, BTN_THUMBL, data[2] & LT_SHIFT);
+      input_report_key(dev, BTN_THUMBR, data[2] & RT_SHIFT);
       /* buttons A,B,X,Y,TL,TR and MODE */
-      input_report_key(dev, BTN_A, data[3] & 0x10);
-      input_report_key(dev, BTN_B, data[3] & 0x20);
-      input_report_key(dev, BTN_X, data[3] & 0x40);
-      input_report_key(dev, BTN_Y, data[3] & 0x80);
-      input_report_key(dev, BTN_TL, data[3] & 0x01);
-      input_report_key(dev, BTN_TR, data[3] & 0x02);
-      input_report_key(dev, BTN_MODE, data[3] & 0x04);
+      input_report_key(dev, BTN_A, data[3] & BUTTON_A_SHIFT);
+      input_report_key(dev, BTN_B, data[3] & BUTTON_B_SHIFT);
+      input_report_key(dev, BTN_X, data[3] & BUTTON_X_SHIFT);
+      input_report_key(dev, BTN_Y, data[3] & BUTTON_Y_SHIFT);
+      input_report_key(dev, BTN_TL, data[3] & BUTTON_TL_SHIFT);
+      input_report_key(dev, BTN_TR, data[3] & BUTTON_TR_SHIFT);
+      input_report_key(dev, BTN_MODE, data[3] & BUTTON_MODE_SHIFT);
       /* left stick */
       input_report_abs(dev, ABS_X, (__s16)le16_to_cpup((__le16 *)(data + 6)));
       input_report_abs(dev, ABS_Y, ~(__s16)le16_to_cpup((__le16 *)(data + 8)));
