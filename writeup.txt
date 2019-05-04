@@ -1,0 +1,89 @@
+contributors: Yifu Wang, Noah Goldstein
+
+Module Design:
+We make use of two sets of linux low-level api, 'linux/input.h' and 'linux/usb/input.h'. The first head file provide the general interface to create an input device, and the second file provide some specific helper function for the usb devices. 
+
+1.The module should and will be loaded at boot up. This is done by running a script in init.d folder. This is the most simple way to do this but not the most reliable way(only in some very special situation where user change the default boot up mode). The most reliable way is to compile the module in to the linux kernel, but obviously we needn't bother to do that.
+
+2.The module will automaticly detect any devices that it support. And create a new thread to handle all the incoming event from each devices. Generally there are two ways to perform an auto-detection. First is load the module at boot up and put the listener inside the module. Second is create another listener module(and of course loaded at boot up) then wake up our module when something happends. Thus, although the second way seems to be more sensable at first, but with a second thought we decide to use the frist method, it's more compact.
+
+3.Inside each thread created in 2. (b.t.w. the creation of a thread is trigglered by a PIC interruption, but before we create the thread, first we will check the device plugged in, to see if it the devices we supported) Firstly, the module will register an input device into the system, after this step our device will officially added to the '/proc/bus/input/devices' file, which record every devices being attached to the linux system. Secondly, the module will create an system event stream to communicate will userspace, this end up becomes a file under '/dev/input/' the file name is assinged by system in runtime.
+
+4.The module will translate all the income massage from the controller, which turns out to be a full state table contains all the information about button, axis, vabration and LEDs. Here, the module will use the API function provided by linux to find out what state has been changed between two adjusant massage and if there is any, we generate a system event to report that (write the the file that assinged to us under 'dev/input/' folder).
+
+5.When the controller being removed frome the system. The module will be notified and terminate the corrosbounding thread.
+
+
+Userspace Design:
+The userspace program basically opens the file that the kernel module writes to, reads the data and parses it to turn it into a human readable form. This is done by #define constants to match the different event values/types and printing an output accordingly (i.e button press has a specific type and the 'A' button has a specific value which are always the same). The userspace program runs in a loop. The userspace program will also store the last 1000 commands (the full unparsed version) and on sigint it will store them all the a log.txt file. These last 1000 commands are also used as a history for parsing certain button presses. For example the array pad release requires the previous input to know whether it was a 'Left'/'Right' arrow if its on the x-axis or 'Up'/'Down' arrow if its on the y-axis.
+
+Build instructions:
+cd Joystick
+make
+
+Running the module
+the module is loaded from boot up.
+but you can just running it with insmod like general module.
+
+Testing and Evaluation:
+There were 3 main things that needed to be tested in development:
+1) Having the module recognize when the x-box controller was plugged in/unplugged
+2) Having the module read the state data from the controlled hardware
+3) Having a userspace read the modules output and parse it into human readable form
+
+1 was tested simply by trying it. We loaded the module and unplugged/plugged in the x-box controlled many times and continuously found the proper response
+
+2 was tested by trying all button combinations (arduously) and ensuring the output data was expected. Origionally we were not reading the data into the proper fields which lead to unexpected results. After we read the data as it was being sent, however, it was reliably working.
+
+3 was tested similar to 2 in that we simply tested different inputs. The biggest difficulty we had here was the arrow pad as instead of being stored as 4 buttons it was stored as an x/y plane with -1,1 values for up/down and left/right. This lead to significant issues until we implimented the history. To output the data for this we would get the previous button pressed on the arrow pad and combine that information with the -1/1 value to give a proper output.
+
+Developement estimate
+25~30h
+
+Feedback Responses:
+
+For your project report, it would be helpful to describe, and show user-space traces for, different scenarios for using the controller (moving X and Y at the same time, etc.).
+
+We have tested this, the state sent by the controlled offer no information on multiple button presses at once (think about the bandwidth it would take to cover all possible states for each signal!). Our understanding of uses which require multiple button presses at once are in reality measured by software and a two buttons are determined to be pressed at the same time if both buttons are sending signals close together in time (faster than the button press time would ever allow for).
+
+
+Can you describe the history that needs to be tracked as finite automata (state machines)?
+
+The history is specifically for two reasons: First, if the controlled crashes having a log for debugging can be useful. Second, for the arrows on the controlled, since the information about them is not stored in 4 buttons, but instead in two buttons (x,y) and two states (-1,1) if x is held down then released it is necessary to have the history of which was pressed (-1 or 1) to identify the exact released button (i.e say left vs right arrow).
+
+
+How applicable would your approach be for different 3rd party controllers for xbox (or possibly other systems)?
+
+The logic would be exactly the same but we would have to recode all the constants and likely the datastructures aswell. Xbox sends 64bytes person read, PS might send 128. It would not take alot of thought but would take alot of work.
+
+
+What would be needed to make your approach work with emulators or with multiple controllers at once?
+
+Not much for multiple controllers. We simply can send each controllers output to its own file and read accordingly (we can do that now). The more interested thing is how do we multiplex the controllers and rest of the PC. Our thought is that while the normal method would work (just run it with low nice score in an epoll call), a custom scheduler for gaming would be best as when someone is gaming it is unlikely they are using any other part of the computer.
+
+
+In your project report please describe how initialization and termination (and other functions) of your approach differ from what is done with kernel modules.
+explained in Module design 2.
+
+What was the motivation for creating a new device module instead of extending the existing one?
+
+We looked over the old one and it was totally outdated (basically all would need to be rewritten to match xbox's data stream). Second, this was a project largely out of interest in building a module from the ground up and it would not have been as worthwhile had we just copied and pasted half the code.
+
+
+Can you send commands to the controller to make its LEDs light up, or have it vibrate?
+
+We did not write the functionality but it is doable.
+
+
+Could your approach also work with keyboard events instead, like arrow keys etc.?
+
+Yes. The primary thing we learned in doing this is that drivers are mainly about interpretting a data stream properly. With a manual one how the data is sent we could write a module to handle just about any basic device.
+
+What is the latency like for your input streams?  How many events per second (or millisecond), what latency is there between detecting an event and delivering it to user space?
+
+Events are in the millisecond range.
+
+
+Please make sure to #define constants with meaningful names, instead of using “magic” numbers.
+
+Done!
