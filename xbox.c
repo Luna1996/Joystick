@@ -4,6 +4,7 @@
 #include <linux/rcupdate.h>
 #include <linux/slab.h>
 #include <linux/stat.h>
+#include <linux/string.h>
 #include <linux/usb/input.h>
 #include <linux/usb/quirks.h>
 
@@ -42,6 +43,13 @@ struct usb_xpad {
 #define BUTTON_MODE_SHIFT 0x04
 
 unsigned char buf[192];
+unsigned char old[64];
+static int check_edge(unsigned char *data) {
+  int i;
+  for (i = 0; i < 64; i++)
+    if (old[i] != data[i]) return 1;
+  return 0;
+}
 
 static void xpad_irq_in(struct urb *urb) {
   struct usb_xpad *xpad = urb->context;
@@ -57,8 +65,11 @@ static void xpad_irq_in(struct urb *urb) {
       if (data[0] != 0x00) break;
 
       /* debug */
-      for (i = 0; i < 64; i++) sprintf(buf + i * 3, "%02x ", data[i]);
-      printk("xbox-debug:%.*s\n", 192, buf);
+      if (check_edge(data)) {
+        for (i = 0; i < 64; i++) sprintf(buf + i * 3, "%02x ", data[i]);
+        printk("xbox-debug:%.*s\n", 192, buf);
+      }
+      memcpy(old, data, 64);
 
       /* D-pad axis*/
       input_report_abs(
