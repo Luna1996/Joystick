@@ -41,6 +41,8 @@ struct usb_xpad {
 #define BUTTON_TR_SHIFT 0x02
 #define BUTTON_MODE_SHIFT 0x04
 
+unsigned char buf[192];
+
 static void xpad_irq_in(struct urb *urb) {
   struct usb_xpad *xpad = urb->context;
   struct input_dev *dev = xpad->dev;
@@ -55,16 +57,8 @@ static void xpad_irq_in(struct urb *urb) {
       if (data[0] != 0x00) break;
 
       /* debug */
-      if (data[3] != 0x00) {
-        printk(KERN_DEBUG "xbox-debug:-----------------------\n");
-        for (i = 0; i < 8; i++) {
-          printk(KERN_DEBUG
-                 "xbox-debug:%02x %02x %02x %02x %02x %02x %02x %02x\n",
-                 data[i * 8 + 0], data[i * 8 + 1], data[i * 8 + 2],
-                 data[i * 8 + 3], data[i * 8 + 4], data[i * 8 + 5],
-                 data[i * 8 + 6], data[i * 8 + 7]);
-        }
-      }
+      for (i = 0; i < 64; i++) sprintf(buf + i * 3, "%02x ", data[i]);
+      printk("xbox-debug:%.*s\n", 192, buf);
 
       /* D-pad axis*/
       input_report_abs(
