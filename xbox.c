@@ -55,9 +55,9 @@ static void xpad_irq_in(struct urb *urb) {
       if (data[0] != 0x00) break;
 
       /* debug */
-      printk("xbox-debug:-----------------------");
+      printk("xbox-debug:-----------------------\n");
       for (i = 0; i < 8; i++) {
-        printk("xbox-debug:%02x %02x %02x %02x %02x %02x %02x %02x",
+        printk("xbox-debug:%02x %02x %02x %02x %02x %02x %02x %02x\n",
                data[i * 8 + 0], data[i * 8 + 1], data[i * 8 + 2],
                data[i * 8 + 3], data[i * 8 + 4], data[i * 8 + 5],
                data[i * 8 + 6], data[i * 8 + 7]);
@@ -191,7 +191,7 @@ static int xpad_probe(struct usb_interface *intf,
   struct usb_xpad *xpad;
   struct usb_endpoint_descriptor *ep_irq_in, *ep_irq_out;
   int i, error;
-  printk("xbox-debug:Device detected!");
+  printk("xbox-debug:Device detected!\n");
 
   xpad = kzalloc(sizeof(struct usb_xpad), GFP_KERNEL);
 
@@ -235,7 +235,7 @@ static int xpad_probe(struct usb_interface *intf,
 
 static void xpad_disconnect(struct usb_interface *intf) {
   struct usb_xpad *xpad = usb_get_intfdata(intf);
-  printk("xbox-debug:Device disconnected!");
+  printk("xbox-debug:Device disconnected!\n");
   if (xpad->input_created) {
     xpad->input_created = false;
     input_unregister_device(xpad->dev);
