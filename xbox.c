@@ -55,7 +55,7 @@ static void xpad_irq_in(struct urb *urb) {
       if (data[0] != 0x00) break;
 
       /* debug */
-      if (data[1] != 0x14) {
+      if (data[3] != 0x00) {
         printk(KERN_DEBUG "xbox-debug:-----------------------\n");
         for (i = 0; i < 8; i++) {
           printk(KERN_DEBUG
