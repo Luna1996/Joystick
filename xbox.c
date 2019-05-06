@@ -45,7 +45,7 @@ static void xpad_irq_in(struct urb *urb) {
   struct usb_xpad *xpad = urb->context;
   struct input_dev *dev = xpad->dev;
   unsigned char *data = xpad->idata;
-  int retval, status;
+  int retval, status, i, j;
 
   status = urb->status;
 
@@ -56,8 +56,8 @@ static void xpad_irq_in(struct urb *urb) {
 
       /* debug */
       printk("-----------------------\n");
-      for (int i = 0; i < 8; i++) {
-        for (int j = 0; j < 8; j++) printk("%02x", data[i * 8 + j]);
+      for (i = 0; i < 8; i++) {
+        for (j = 0; j < 8; j++) printk("%02x", data[i * 8 + j]);
         printk("\n");
       }
       printk("-----------------------\n");
