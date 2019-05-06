@@ -53,6 +53,15 @@ static void xpad_irq_in(struct urb *urb) {
     case 0:
       /* success */
       if (data[0] != 0x00) break;
+
+      /* debug */
+      printk("-----------------------\n");
+      for (int i = 0; i < 8; i++) {
+        for (int j = 0; j < 8; j++) printk("%02x", data[i * 8 + j]);
+        printk("\n");
+      }
+      printk("-----------------------\n");
+
       /* D-pad axis*/
       input_report_abs(
           dev, ABS_HAT0X,
