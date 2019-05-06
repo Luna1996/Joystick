@@ -49,19 +49,18 @@ static void xpad_irq_in(struct urb *urb) {
 
   status = urb->status;
 
+  printk(KERN_DEBUG "xbox-debug:-----------------------\n");
+  for (i = 0; i < 8; i++) {
+    printk(KERN_DEBUG "xbox-debug:%02x %02x %02x %02x %02x %02x %02x %02x\n",
+           data[i * 8 + 0], data[i * 8 + 1], data[i * 8 + 2], data[i * 8 + 3],
+           data[i * 8 + 4], data[i * 8 + 5], data[i * 8 + 6], data[i * 8 + 7]);
+  }
   switch (status) {
     case 0:
       /* success */
       if (data[0] != 0x00) break;
 
       /* debug */
-      printk(KERN_DEBUG "xbox-debug:-----------------------\n");
-      for (i = 0; i < 8; i++) {
-        printk(
-            KERN_DEBUG "xbox-debug:%02x %02x %02x %02x %02x %02x %02x %02x\n",
-            data[i * 8 + 0], data[i * 8 + 1], data[i * 8 + 2], data[i * 8 + 3],
-            data[i * 8 + 4], data[i * 8 + 5], data[i * 8 + 6], data[i * 8 + 7]);
-      }
 
       /* D-pad axis*/
       input_report_abs(
